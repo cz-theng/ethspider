@@ -46,6 +46,9 @@ func _main(cmd *cobra.Command, args []string) {
 		if err := loadConfig(_configFile); err != nil {
 			return
 		}
+	} else {
+		cmd.Usage()
+		return
 	}
 
 	logFile := "ethspider.log"
