@@ -2,8 +2,11 @@ package ethspider
 
 import (
 	"context"
+	"math/big"
 
 	"github.com/cz-theng/czkit-go/log"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
@@ -40,5 +43,37 @@ func (s *Spider) Start() (err error) {
 		return err
 	}
 	log.Info(" get latest block number:%d", latest)
+
+	trx, _, err := s.client.TransactionByHash(s.ctx, common.HexToHash("0x0c2aafa7234e24ebc43f8fab5a158fa23fccaed102598213838cbe361938b50f"))
+	if err != nil {
+		log.Error("TransactionByHash err: ", err.Error())
+		return
+	}
+	trxJSON, _ := trx.MarshalJSON()
+	log.Info("trx:%s", string(trxJSON))
+
+	//s.pullBlocks(latest)
+	return
+}
+
+func (s *Spider) pullBlocks(latest uint64) {
+	for {
+		if latest <= 1 {
+			break
+		}
+		num := latest
+		latest--
+		blk, err := s.pullBlock(num)
+		if err != nil {
+			continue
+		}
+		log.Info("get block[%d]:%s", blk.NumberU64(), blk.Hash().Hex())
+	}
+}
+
+func (s *Spider) pullBlock(num uint64) (blk *types.Block, err error) {
+	bigNum := big.NewInt(0)
+	bigNum.SetUint64(num)
+	blk, err = s.client.BlockByNumber(s.ctx, bigNum)
 	return
 }
