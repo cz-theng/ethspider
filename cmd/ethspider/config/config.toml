@@ -1,0 +1,4 @@
+RPCAddr = "https://rpc-mainnet.maticvigil.com/"
+LogFile = "ethspider.log"
+LogPath = "./"
+LogLevel = "Debug"

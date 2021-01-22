@@ -17,3 +17,4 @@
 ## CZ
 .vscode/
 cmd/ethspider/ethspider
+cmd/ethspider/ethspider.log
