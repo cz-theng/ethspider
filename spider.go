@@ -3,11 +3,14 @@ package ethspider
 import (
 	"context"
 	"math/big"
+	"reflect"
+	"sync/atomic"
+	"unsafe"
 
 	"github.com/cz-theng/czkit-go/log"
+	"github.com/cz-theng/ethspider/ethclient"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 // Spider is the main service
@@ -44,15 +47,7 @@ func (s *Spider) Start() (err error) {
 	}
 	log.Info(" get latest block number:%d", latest)
 
-	trx, _, err := s.client.TransactionByHash(s.ctx, common.HexToHash("0x0c2aafa7234e24ebc43f8fab5a158fa23fccaed102598213838cbe361938b50f"))
-	if err != nil {
-		log.Error("TransactionByHash err: ", err.Error())
-		return
-	}
-	trxJSON, _ := trx.MarshalJSON()
-	log.Info("trx:%s", string(trxJSON))
-
-	//s.pullBlocks(latest)
+	s.pullBlocks(latest)
 	return
 }
 
@@ -68,6 +63,7 @@ func (s *Spider) pullBlocks(latest uint64) {
 			continue
 		}
 		log.Info("get block[%d]:%s", blk.NumberU64(), blk.Hash().Hex())
+		s.dealBlock(blk)
 	}
 }
 
@@ -76,4 +72,28 @@ func (s *Spider) pullBlock(num uint64) (blk *types.Block, err error) {
 	bigNum.SetUint64(num)
 	blk, err = s.client.BlockByNumber(s.ctx, bigNum)
 	return
+}
+
+func (s *Spider) dealBlock(blk *types.Block) {
+	if nil == blk {
+		return
+	}
+
+	for _, trx := range blk.Transactions() {
+		s.dealTransaction(trx)
+	}
+}
+
+func (s *Spider) dealTransaction(trx *types.Transaction) {
+	if nil == trx {
+		return
+	}
+	fromPtr := reflect.ValueOf(trx).Elem().FieldByName("from")
+	fromPtr = reflect.NewAt(fromPtr.Type(), unsafe.Pointer(fromPtr.UnsafeAddr())).Elem()
+	if v, ok := fromPtr.Interface().(atomic.Value); ok {
+		value := v.Load()
+		if fromAddr, ok := value.(common.Address); ok {
+			log.Info("trx[%s]from addr :%s", trx.Hash().Hex(), fromAddr.Hex())
+		}
+	}
 }
